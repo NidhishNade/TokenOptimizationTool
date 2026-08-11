@@ -16,13 +16,21 @@ from .counter import count_tokens, estimate_cost
 # A reducer is any function: text in, (smaller) text out.
 Reducer = Callable[[str], str]
 
-# The default pipeline, applied in this order. Each entry is (name, description,
-# function). Whitespace runs last as a final tidy-up.
-DEFAULT_PIPELINE: list[tuple[str, str, Reducer]] = [
+# The SAFE pipeline: meaning-preserving reducers, applied in this order.
+# Whitespace runs last as a final tidy-up.
+SAFE_PIPELINE: list[tuple[str, str, Reducer]] = [
     ("remove_duplicates", "Drop word-for-word repeated sentences", reducers.remove_duplicate_sentences),
     ("remove_filler", "Remove politeness / padding words", reducers.remove_filler),
     ("normalize_whitespace", "Collapse wasteful whitespace", reducers.normalize_whitespace),
 ]
+
+# Extra AGGRESSIVE steps (opt-in): higher savings, but can change meaning.
+AGGRESSIVE_STEPS: list[tuple[str, str, Reducer]] = [
+    ("abbreviate", "Shorten words/phrases — aggressive", reducers.abbreviate),
+]
+
+# Kept as an alias so existing callers/tests using DEFAULT_PIPELINE still work.
+DEFAULT_PIPELINE = SAFE_PIPELINE
 
 
 @dataclass
@@ -93,10 +101,18 @@ def optimize(
     text: str,
     model: str = pricing.DEFAULT_MODEL,
     pipeline: list[tuple[str, str, Reducer]] | None = None,
+    aggressive: bool = False,
 ) -> OptimizationResult:
-    """Run the reducer pipeline over ``text`` and return a full report."""
+    """Run the reducer pipeline over ``text`` and return a full report.
+
+    By default only the safe, meaning-preserving reducers run. Pass
+    ``aggressive=True`` to also apply the opt-in shorthand reducers, or pass a
+    custom ``pipeline`` to control the steps exactly.
+    """
     if pipeline is None:
-        pipeline = DEFAULT_PIPELINE
+        pipeline = list(SAFE_PIPELINE)
+        if aggressive:
+            pipeline = pipeline + AGGRESSIVE_STEPS
 
     current = text
     tokens_before = count_tokens(current)
