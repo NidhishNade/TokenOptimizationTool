@@ -111,6 +111,8 @@ def _tidy_punctuation(text: str) -> str:
     text = re.sub(r"(^|[.!?]\s+)[,;:]+\s*", r"\1", text)
     # Collapse repeated commas: ",," -> ","
     text = re.sub(r",\s*,+", ",", text)
+    # Collapse repeated sentence-enders: ". ." or ".." -> "."
+    text = re.sub(r"([.!?])(\s*[.!?])+", r"\1", text)
     return text
 
 
@@ -141,3 +143,110 @@ def remove_duplicate_sentences(text: str) -> str:
         kept.append(sentence.strip())
 
     return " ".join(kept)
+
+
+# ===========================================================================
+# ADVANCED / OPT-IN reducers (Phase 3).
+# These save more but can change meaning, so they are NOT in the safe default
+# pipeline — the caller must ask for them explicitly.
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# 4. Abbreviator  (🟡 medium risk — the model must understand the shorthand)
+# ---------------------------------------------------------------------------
+
+# Multi-word phrases first (longer matches win). value = short form.
+_ABBREVIATION_PHRASES = {
+    "as soon as possible": "ASAP",
+    "with respect to": "re:",
+    "for example": "e.g.",
+    "that is to say": "i.e.",
+    "in order to": "to",
+    "a lot of": "many",
+    "due to the fact that": "because",
+    "in the event that": "if",
+}
+
+# Single words. Includes some aggressive ones (you -> u) on purpose.
+_ABBREVIATION_WORDS = {
+    "because": "bc",
+    "approximately": "approx",
+    "information": "info",
+    "documentation": "docs",
+    "application": "app",
+    "number": "no.",
+    "versus": "vs",
+    "without": "w/o",
+    "with": "w/",
+    "and": "&",
+    "you": "u",
+    "your": "ur",
+    "are": "r",
+}
+
+
+def abbreviate(text: str) -> str:
+    """Replace common words/phrases with shorter forms (opt-in, aggressive).
+
+    Saves tokens but relies on the model understanding the shorthand, so it can
+    change meaning. Off by default — pass it explicitly if you want it.
+    """
+    for phrase, short in _ABBREVIATION_PHRASES.items():
+        text = re.sub(re.escape(phrase), short, text, flags=re.IGNORECASE)
+
+    for word, short in _ABBREVIATION_WORDS.items():
+        text = re.sub(rf"\b{re.escape(word)}\b", short, text, flags=re.IGNORECASE)
+
+    return normalize_whitespace(text)
+
+
+# ---------------------------------------------------------------------------
+# 5. Extractive summariser  (🔴 high risk — drops whole sentences)
+# ---------------------------------------------------------------------------
+
+# A tiny stop-word list: extremely common words that carry little meaning, so
+# they shouldn't count toward a sentence's "importance" score.
+_STOPWORDS = {
+    "the", "a", "an", "and", "or", "but", "is", "are", "was", "were", "be",
+    "been", "to", "of", "in", "on", "for", "with", "as", "at", "by", "it",
+    "this", "that", "these", "those", "i", "you", "he", "she", "we", "they",
+    "do", "does", "did", "has", "have", "had", "will", "would", "can", "could",
+    "not", "no", "so", "if", "then", "than", "from", "up", "out", "about",
+}
+
+
+def extractive_summary(text: str, keep_ratio: float = 0.6) -> str:
+    """Keep only the most important sentences (opt-in, lossy).
+
+    'Extractive' means we *select* existing sentences (never invent text) — this
+    keeps it truthful and 100% free/offline. Importance = how many meaningful,
+    frequent words a sentence contains. We keep ``keep_ratio`` of the sentences,
+    in their original order.
+    """
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+    if len(sentences) <= 1:
+        return text.strip()
+
+    # Count how often each meaningful word appears across the whole text.
+    frequency: dict[str, int] = {}
+    for sentence in sentences:
+        for word in re.findall(r"[a-zA-Z']+", sentence.lower()):
+            if word in _STOPWORDS:
+                continue
+            frequency[word] = frequency.get(word, 0) + 1
+
+    def score(sentence: str) -> float:
+        words = [w for w in re.findall(r"[a-zA-Z']+", sentence.lower()) if w not in _STOPWORDS]
+        if not words:
+            return 0.0
+        # Average frequency of the sentence's meaningful words.
+        return sum(frequency.get(w, 0) for w in words) / len(words)
+
+    # How many sentences to keep (at least 1).
+    keep_count = max(1, round(len(sentences) * keep_ratio))
+
+    # Pick the highest-scoring sentence indices, then restore original order.
+    ranked = sorted(range(len(sentences)), key=lambda i: score(sentences[i]), reverse=True)
+    keep_indices = sorted(ranked[:keep_count])
+
+    return " ".join(sentences[i] for i in keep_indices)
