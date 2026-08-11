@@ -28,10 +28,10 @@ for real content.
 Built in phases:
 
 - [x] Phase 0 — Project setup
-- [ ] Phase 1 — Measure (token counter + cost)
-- [ ] Phase 2 — Reduce engine (core)
-- [ ] Phase 3 — Reduce advanced
-- [ ] Phase 4 — CLI polish
+- [x] Phase 1 — Measure (token counter + cost)
+- [x] Phase 2 — Reduce engine (core)
+- [x] Phase 3 — Reduce advanced
+- [x] Phase 4 — CLI polish
 - [ ] Phase 5 — Streamlit web UI
 - [ ] Phase 6 — Visuals + extras
 
@@ -43,12 +43,40 @@ python -m venv .venv
 .venv\Scripts\activate      # Windows
 # source .venv/bin/activate # macOS/Linux
 
-# Install dependencies
-pip install -r requirements.txt
+# Install the tool (this also enables the `token-optimizer` command)
+pip install -e .
 
 # Run the tests
 pytest
 ```
+
+## Command-line usage
+
+```bash
+# Optimize a file and see the before/after report
+token-optimizer prompt.txt
+
+# Estimate cost for a specific model
+token-optimizer prompt.txt --model claude-opus
+
+# Aggressive mode (opt-in shorthand: "you" -> "u", "documentation" -> "docs")
+token-optimizer prompt.txt --aggressive
+
+# Save the shortened text to a file
+token-optimizer prompt.txt --output short.txt
+
+# Just measure, don't reduce
+token-optimizer prompt.txt --measure-only
+
+# Show structural advice (repeated blocks you could cache)
+token-optimizer prompt.txt --advise
+
+# Pipe text in from another command
+echo "Please kindly summarize this, thank you so much." | token-optimizer
+```
+
+The optimized text is printed to **stdout** and the report to **stderr**, so you
+can redirect just the text: `token-optimizer prompt.txt > short.txt`.
 
 ## License
 

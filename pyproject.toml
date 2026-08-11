@@ -14,6 +14,10 @@ dev = [
     "pytest>=8.0.0",
 ]
 
+# This makes `token-optimizer` runnable as a terminal command after install.
+[project.scripts]
+token-optimizer = "optimizer.cli:main"
+
 [tool.pytest.ini_options]
 # Let tests import the package from the src/ folder.
 pythonpath = ["src"]
