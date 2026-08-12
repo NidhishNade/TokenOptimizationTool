@@ -5,13 +5,14 @@ from .counter import Measurement, count_tokens, estimate_cost, measure
 from .engine import OptimizationResult, Step, optimize
 from .reducers import (
     abbreviate,
+    caveman,
     extractive_summary,
     normalize_whitespace,
     remove_duplicate_sentences,
     remove_filler,
 )
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 __all__ = [
     # measuring (Phase 1)
@@ -26,8 +27,9 @@ __all__ = [
     "normalize_whitespace",
     "remove_duplicate_sentences",
     "remove_filler",
-    # reducing — advanced / opt-in (Phase 3)
+    # reducing — advanced / opt-in (Phase 3+)
     "abbreviate",
+    "caveman",
     "extractive_summary",
     # advice (Phase 3)
     "Suggestion",

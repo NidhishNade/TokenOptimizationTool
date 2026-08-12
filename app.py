@@ -64,6 +64,10 @@ with st.sidebar:
         "Aggressive mode",
         help="Also apply opt-in shorthand (you→u, documentation→docs). Can change meaning.",
     )
+    caveman_mode = st.checkbox(
+        "Caveman mode",
+        help="Drop articles (a/an/the) but keep readable sentences.",
+    )
     use_summary = st.checkbox(
         "Extractive summary",
         help="Keep only the most important sentences. Lossy — drops content.",
@@ -99,7 +103,7 @@ text = st.text_area(
 # Results
 # ---------------------------------------------------------------------------
 if text.strip():
-    result = optimize(text, model=model, aggressive=aggressive)
+    result = optimize(text, model=model, aggressive=aggressive, caveman=caveman_mode)
 
     optimized_text = result.optimized_text
     if use_summary:

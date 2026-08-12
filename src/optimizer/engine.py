@@ -29,6 +29,11 @@ AGGRESSIVE_STEPS: list[tuple[str, str, Reducer]] = [
     ("abbreviate", "Shorten words/phrases — aggressive", reducers.abbreviate),
 ]
 
+# Caveman step (opt-in): drop articles, keep readable sentences.
+CAVEMAN_STEP: tuple[str, str, Reducer] = (
+    "caveman", "Caveman mode — drop articles, keep meaning", reducers.caveman,
+)
+
 # Kept as an alias so existing callers/tests using DEFAULT_PIPELINE still work.
 DEFAULT_PIPELINE = SAFE_PIPELINE
 
@@ -102,15 +107,19 @@ def optimize(
     model: str = pricing.DEFAULT_MODEL,
     pipeline: list[tuple[str, str, Reducer]] | None = None,
     aggressive: bool = False,
+    caveman: bool = False,
 ) -> OptimizationResult:
     """Run the reducer pipeline over ``text`` and return a full report.
 
     By default only the safe, meaning-preserving reducers run. Pass
-    ``aggressive=True`` to also apply the opt-in shorthand reducers, or pass a
-    custom ``pipeline`` to control the steps exactly.
+    ``aggressive=True`` to also apply the opt-in shorthand reducers, and/or
+    ``caveman=True`` to drop articles (still readable). Pass a custom
+    ``pipeline`` to control the steps exactly.
     """
     if pipeline is None:
         pipeline = list(SAFE_PIPELINE)
+        if caveman:
+            pipeline = pipeline + [CAVEMAN_STEP]
         if aggressive:
             pipeline = pipeline + AGGRESSIVE_STEPS
 
