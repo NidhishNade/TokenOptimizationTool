@@ -33,7 +33,7 @@ Built in phases:
 - [x] Phase 3 — Reduce advanced
 - [x] Phase 4 — CLI polish
 - [x] Phase 5 — Streamlit web UI
-- [ ] Phase 6 — Visuals + extras
+- [x] Phase 6 — Visuals + extras 🎉
 
 ## Getting started
 
