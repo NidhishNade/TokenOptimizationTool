@@ -250,3 +250,42 @@ def extractive_summary(text: str, keep_ratio: float = 0.6) -> str:
     keep_indices = sorted(ranked[:keep_count])
 
     return " ".join(sentences[i] for i in keep_indices)
+
+
+# ---------------------------------------------------------------------------
+# 6. Caveman mode  (🟡 medium risk — tightens grammar but stays readable)
+# ---------------------------------------------------------------------------
+
+# The words we strip: articles carry almost no meaning, so dropping them keeps
+# sentences perfectly understandable ("summarize the report" -> "summarize
+# report"). We deliberately KEEP nouns, verbs, and pronouns so the result still
+# reads as a real sentence rather than gibberish.
+_CAVEMAN_DROP = {"a", "an", "the"}
+
+
+def _capitalize_sentences(text: str) -> str:
+    """Uppercase the first letter of the text and of each new sentence."""
+    return re.sub(
+        r"(^|[.!?]\s+)([a-z])",
+        lambda m: m.group(1) + m.group(2).upper(),
+        text,
+    )
+
+
+def caveman(text: str) -> str:
+    """'Caveman' style: drop articles and tighten, but keep readable sentences.
+
+    Removes ``a`` / ``an`` / ``the`` (which add tokens but little meaning), tidies
+    the leftover spacing/punctuation, then re-capitalizes each sentence so the
+    output still looks like proper English — just leaner.
+    """
+    pattern = r"\b(?:" + "|".join(re.escape(w) for w in _CAVEMAN_DROP) + r")\b"
+    text = re.sub(pattern, "", text, flags=re.IGNORECASE)
+
+    # Clean up the gaps the removals leave behind.
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\s+([,.!?;:])", r"\1", text)
+    text = _tidy_punctuation(text)
+    text = normalize_whitespace(text)
+
+    return _capitalize_sentences(text)

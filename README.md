@@ -62,6 +62,9 @@ token-optimizer prompt.txt --model claude-opus
 # Aggressive mode (opt-in shorthand: "you" -> "u", "documentation" -> "docs")
 token-optimizer prompt.txt --aggressive
 
+# Caveman mode (drop articles a/an/the, keep readable sentences)
+token-optimizer prompt.txt --caveman
+
 # Save the shortened text to a file
 token-optimizer prompt.txt --output short.txt
 

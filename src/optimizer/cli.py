@@ -52,6 +52,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Also apply opt-in shorthand reducers (can change meaning).",
     )
     parser.add_argument(
+        "-c", "--caveman",
+        action="store_true",
+        help="Caveman mode: drop articles (a/an/the) but keep readable sentences.",
+    )
+    parser.add_argument(
         "--measure-only",
         action="store_true",
         help="Only count tokens / cost; do not reduce.",
@@ -109,7 +114,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     # --- Optimize ----------------------------------------------------------
-    result = optimize(text, model=args.model, aggressive=args.aggressive)
+    result = optimize(
+        text, model=args.model, aggressive=args.aggressive, caveman=args.caveman
+    )
 
     if args.output:
         with open(args.output, "w", encoding="utf-8") as handle:
