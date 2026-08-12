@@ -10,6 +10,7 @@ The page lets you paste text, choose a model, and see the token savings.
 
 from __future__ import annotations
 
+import pandas as pd
 import streamlit as st
 
 from optimizer import advise, count_tokens, extractive_summary, measure, optimize
@@ -26,12 +27,28 @@ st.caption(
     "and fits more in the context window."
 )
 
-EXAMPLE = (
-    "Please could you kindly summarize the following report for me. "
-    "It is important to note that I would like you to focus on the key findings. "
-    "Please could you kindly summarize the following report for me. "
-    "Thank you so much, I really appreciate it."
-)
+# One-click example prompts, each showing off a different kind of waste.
+PRESETS: dict[str, str] = {
+    "Polite padding + a repeat": (
+        "Please could you kindly summarize the following report for me. "
+        "It is important to note that I would like you to focus on the key findings. "
+        "Please could you kindly summarize the following report for me. "
+        "Thank you so much, I really appreciate it."
+    ),
+    "Wordy phrases (aggressive shines)": (
+        "In order to complete this as soon as possible, please review the "
+        "documentation because you are the owner of the application. With respect "
+        "to the number of issues, there are approximately ten that you must fix."
+    ),
+    "Repeated instruction block (advisor)": (
+        "Follow the full company style guide and cite every source you use.\n\n"
+        "Analyse the Q1 revenue results.\n\n"
+        "Follow the full company style guide and cite every source you use.\n\n"
+        "Analyse the Q2 revenue results.\n\n"
+        "Follow the full company style guide and cite every source you use."
+    ),
+}
+EXAMPLE = PRESETS["Polite padding + a repeat"]
 
 # ---------------------------------------------------------------------------
 # Sidebar controls
@@ -64,10 +81,11 @@ with st.sidebar:
 if "text" not in st.session_state:
     st.session_state.text = ""
 
-col_a, col_b = st.columns([1, 1])
-if col_a.button("Load example", use_container_width=True):
-    st.session_state.text = EXAMPLE
-if col_b.button("Clear", use_container_width=True):
+col_preset, col_load, col_clear = st.columns([2, 1, 1])
+chosen_preset = col_preset.selectbox("Examples", list(PRESETS), label_visibility="collapsed")
+if col_load.button("Load", use_container_width=True):
+    st.session_state.text = PRESETS[chosen_preset]
+if col_clear.button("Clear", use_container_width=True):
     st.session_state.text = ""
 
 text = st.text_area(
@@ -106,10 +124,29 @@ if text.strip():
         f"(saves ${original_cost - optimized_cost:.6f})"
     )
 
+    # --- Visual: before vs after -----------------------------------------
+    compare_df = pd.DataFrame(
+        {"tokens": [original_tokens, final_tokens]},
+        index=["Original", "Optimized"],
+    )
+    st.bar_chart(compare_df, color="#4c9be8", horizontal=True)
+
     st.subheader("Optimized text")
     st.code(optimized_text, language=None)
+    st.download_button(
+        "⬇️ Download optimized text",
+        data=optimized_text,
+        file_name="optimized.txt",
+        mime="text/plain",
+    )
 
     with st.expander("Per-step breakdown"):
+        # A small chart of how many tokens each reducer saved.
+        step_df = pd.DataFrame(
+            {"tokens saved": [s.tokens_saved for s in result.steps]},
+            index=[s.description for s in result.steps],
+        )
+        st.bar_chart(step_df, color="#7bd88f")
         for step in result.steps:
             st.write(
                 f"**{step.description}**: "
