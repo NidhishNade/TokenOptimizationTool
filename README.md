@@ -32,7 +32,7 @@ Built in phases:
 - [x] Phase 2 — Reduce engine (core)
 - [x] Phase 3 — Reduce advanced
 - [x] Phase 4 — CLI polish
-- [ ] Phase 5 — Streamlit web UI
+- [x] Phase 5 — Streamlit web UI
 - [ ] Phase 6 — Visuals + extras
 
 ## Getting started
@@ -77,6 +77,17 @@ echo "Please kindly summarize this, thank you so much." | token-optimizer
 
 The optimized text is printed to **stdout** and the report to **stderr**, so you
 can redirect just the text: `token-optimizer prompt.txt > short.txt`.
+
+## Web app
+
+A pure-Python web UI (Streamlit) — paste text, tweak settings, see the savings.
+
+```bash
+pip install -e ".[ui]"   # installs Streamlit
+streamlit run app.py
+```
+
+Then open http://localhost:8501.
 
 ## License
 

@@ -13,6 +13,9 @@ dependencies = [
 dev = [
     "pytest>=8.0.0",
 ]
+ui = [
+    "streamlit>=1.30",
+]
 
 # This makes `token-optimizer` runnable as a terminal command after install.
 [project.scripts]
