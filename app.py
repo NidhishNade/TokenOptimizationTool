@@ -15,6 +15,7 @@ import streamlit as st
 
 from optimizer import advise, count_tokens, extractive_summary, measure, optimize
 from optimizer import pricing
+from optimizer.local_llm import LocalLLMError, is_available, llm_compress
 
 # ---------------------------------------------------------------------------
 # Page setup
@@ -79,6 +80,17 @@ with st.sidebar:
     )
     show_advice = st.checkbox("Show structural advice", value=True)
 
+    st.divider()
+    use_llm = st.checkbox(
+        "Local LLM compression",
+        help="Rewrite shorter with a free, offline gpt4all model (runs on your CPU).",
+    )
+    if use_llm:
+        if not is_available():
+            st.warning("gpt4all not installed. Run: pip install gpt4all")
+        else:
+            st.caption("First use downloads a ~0.8 GB model (once), then runs offline.")
+
 # ---------------------------------------------------------------------------
 # Input
 # ---------------------------------------------------------------------------
@@ -108,6 +120,17 @@ if text.strip():
     optimized_text = result.optimized_text
     if use_summary:
         optimized_text = extractive_summary(optimized_text, keep_ratio=keep_ratio)
+
+    if use_llm:
+        try:
+            with st.spinner("Compressing with local model (first run downloads it)…"):
+                compressed = llm_compress(optimized_text)
+            if count_tokens(compressed) < count_tokens(optimized_text):
+                optimized_text = compressed
+            else:
+                st.info("Local model output wasn't smaller; kept the rule-based result.")
+        except LocalLLMError as exc:
+            st.warning(f"LLM compression skipped — {exc}")
 
     final_tokens = count_tokens(optimized_text)
     original_tokens = result.original_tokens

@@ -57,6 +57,16 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Caveman mode: drop articles (a/an/the) but keep readable sentences.",
     )
     parser.add_argument(
+        "--llm",
+        action="store_true",
+        help="Also compress with a local gpt4all model (free/offline; downloads once).",
+    )
+    parser.add_argument(
+        "--llm-model",
+        default=None,
+        help="gpt4all model file to use for --llm (default: small Llama-3.2-1B).",
+    )
+    parser.add_argument(
         "--measure-only",
         action="store_true",
         help="Only count tokens / cost; do not reduce.",
@@ -118,14 +128,37 @@ def main(argv: list[str] | None = None) -> int:
         text, model=args.model, aggressive=args.aggressive, caveman=args.caveman
     )
 
+    final_text = result.optimized_text
+
+    # Optional local-LLM pass on top of the rule-based result.
+    if args.llm:
+        from .counter import count_tokens
+        from .local_llm import DEFAULT_LLM_MODEL, LocalLLMError, llm_compress
+
+        model_name = args.llm_model or DEFAULT_LLM_MODEL
+        print(f"[--llm] running local model {model_name} "
+              f"(first run downloads it)…", file=sys.stderr)
+        try:
+            compressed = llm_compress(final_text, model=model_name)
+        except LocalLLMError as exc:
+            print(f"\n[--llm skipped] {exc}", file=sys.stderr)
+        else:
+            # Only accept the LLM version if it actually saved tokens.
+            if count_tokens(compressed) < count_tokens(final_text):
+                final_text = compressed
+                print("[--llm] applied local model compression.", file=sys.stderr)
+            else:
+                print("[--llm] model output wasn't smaller; kept rule-based result.",
+                      file=sys.stderr)
+
     if args.output:
         with open(args.output, "w", encoding="utf-8") as handle:
-            handle.write(result.optimized_text)
+            handle.write(final_text)
         print(f"Optimized text written to {args.output}\n", file=sys.stderr)
     else:
         # Print the report to stderr and the actual text to stdout, so the text
         # can be piped onward cleanly (e.g. `token-optimizer p.txt > short.txt`).
-        print(result.optimized_text)
+        print(final_text)
 
     print(result.summary(), file=sys.stderr)
 
