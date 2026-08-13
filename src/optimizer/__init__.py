@@ -13,7 +13,7 @@ from .reducers import (
     remove_filler,
 )
 
-__version__ = "1.2.0"
+__version__ = "1.2.3"
 
 __all__ = [
     # measuring (Phase 1)
