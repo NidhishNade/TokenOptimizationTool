@@ -80,11 +80,35 @@ def llm_compress(
     # Cap output near the input length — the result should be shorter anyway.
     cap = max_tokens or max(64, len(text.split()) + 32)
     try:
-        output = llm.generate(prompt, max_tokens=cap)
+        # A chat session applies the model's instruct/chat template, which the
+        # instruct models need to actually respond (without it they emit an
+        # immediate stop token -> empty output).
+        with llm.chat_session():
+            output = llm.generate(prompt, max_tokens=cap)
     except Exception as exc:
         raise LocalLLMError(f"Local model failed to generate: {exc}") from exc
 
-    compressed = (output or "").strip()
+    compressed = _strip_preamble(output or "")
     if not compressed:
         raise LocalLLMError("Local model returned an empty response.")
     return compressed
+
+
+def _strip_preamble(text: str) -> str:
+    """Remove chatty lead-ins small models add despite being told not to.
+
+    E.g. 'Sure! Here is the compressed text:\\n\\n<actual>' -> '<actual>'.
+    Also strips surrounding quotes the model sometimes wraps around its answer.
+    """
+    text = text.strip()
+
+    # If the first line is a short lead-in ending with a colon, drop it.
+    first, sep, rest = text.partition("\n")
+    if sep and first.rstrip().endswith(":") and len(first) < 120 and rest.strip():
+        text = rest.strip()
+
+    # Strip a matching pair of surrounding quotes.
+    if len(text) >= 2 and text[0] in "\"'" and text[-1] == text[0]:
+        text = text[1:-1].strip()
+
+    return text
