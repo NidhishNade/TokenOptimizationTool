@@ -107,12 +107,17 @@ streamlit run app.py
 
 Then open http://localhost:8501.
 
-## Local LLM compression (optional)
+## Local LLM compression (optional, ⚠️ experimental)
 
 Rule-based reducers only *delete* words. To *rewrite* text shorter while keeping
 meaning, the tool can use a small language model that runs **entirely on your
 machine** via [gpt4all](https://github.com/nomic-ai/gpt4all) — free, offline, no
 API key. Your text never leaves your computer.
+
+> **Experimental — quality depends on model size.** The small default model
+> (Llama-3.2-1B) compresses aggressively but doesn't always follow instructions
+> cleanly: it may add a preamble or vary run-to-run, so **check its output**. A
+> larger local model gives cleaner results at the cost of a bigger download.
 
 ```bash
 pip install -e ".[llm]"   # installs gpt4all

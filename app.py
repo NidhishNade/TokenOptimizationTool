@@ -82,8 +82,9 @@ with st.sidebar:
 
     st.divider()
     use_llm = st.checkbox(
-        "Local LLM compression",
-        help="Rewrite shorter with a free, offline gpt4all model (runs on your CPU).",
+        "Local LLM compression ⚠️",
+        help="Experimental. Rewrite shorter with a free, offline gpt4all model. "
+             "The small model can ramble or vary run-to-run — check the output.",
     )
     if use_llm:
         if not is_available():
