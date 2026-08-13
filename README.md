@@ -58,6 +58,9 @@ python -m venv .venv
 # Install the tool (this also enables the `token-optimizer` command)
 pip install -e .
 
+# ...or install with dev + UI extras (pytest, streamlit)
+pip install -e ".[dev,ui]"
+
 # Run the tests
 pytest
 ```
@@ -106,6 +109,17 @@ streamlit run app.py
 ```
 
 Then open http://localhost:8501.
+
+### Deploy it free (Streamlit Community Cloud)
+
+The web app is ready to host for free:
+
+1. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub.
+2. **Create app** → pick this repo, branch `main`, main file `app.py`.
+3. **Deploy** — it installs `requirements.txt` and gives you a public URL.
+
+Local-LLM mode is disabled on the hosted version (gpt4all is too heavy for the
+free host); all the rule-based features work.
 
 ## Local LLM compression (optional, ⚠️ experimental)
 

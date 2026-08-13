@@ -1,2 +1,6 @@
+# Runtime dependencies for the web app (used by Streamlit Community Cloud).
+# Dev tools (pytest) live in the [dev] extra; the optional local-LLM model
+# (gpt4all) is intentionally omitted here — it's too heavy for the free host,
+# and the app degrades gracefully when it's absent.
+streamlit>=1.30
 tiktoken>=0.7.0
-pytest>=8.0.0

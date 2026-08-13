@@ -10,6 +10,14 @@ The page lets you paste text, choose a model, and see the token savings.
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# Make the `optimizer` package importable without installing it — this lets the
+# app run on hosts (e.g. Streamlit Community Cloud) that only `pip install
+# -r requirements.txt` and don't build the package.
+sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
+
 import pandas as pd
 import streamlit as st
 
@@ -88,7 +96,11 @@ with st.sidebar:
     )
     if use_llm:
         if not is_available():
-            st.warning("gpt4all not installed. Run: pip install gpt4all")
+            st.warning(
+                "Local LLM mode needs gpt4all, which runs only when you install "
+                "and run this app on your own machine (`pip install gpt4all`). "
+                "It's unavailable on the hosted version."
+            )
         else:
             st.caption("First use downloads a ~0.8 GB model (once), then runs offline.")
 
