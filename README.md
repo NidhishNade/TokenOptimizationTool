@@ -16,6 +16,18 @@ A **token** is roughly ¾ of a word. LLMs charge per token and limit how many fi
 one request. Saying the same thing in fewer tokens saves money and leaves more room
 for real content.
 
+## How much does it save?
+
+**It depends entirely on how wasteful your input is** — this is by design:
+
+- **Already-lean text → close to 0% saved.** There's nothing to cut, and a good
+  optimizer shouldn't damage tight writing.
+- **Bloated text (politeness, padding, repeated instructions) → 40–60%+ saved.**
+
+The rule-based reducers only *delete* clearly-wasteful words, so they never invent
+or distort meaning. For deeper savings on verbose-but-not-repetitive text, the
+optional local-LLM mode can *rewrite* it shorter (see below).
+
 ## Tech stack (all free & permissively licensed)
 
 - **Python 3** — the core engine

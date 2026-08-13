@@ -143,6 +143,14 @@ if text.strip():
     m2.metric("Optimized", f"{final_tokens:,} tok")
     m3.metric("Saved", f"{saved:,} tok", f"-{percent:.0f}%")
 
+    # Savings depend on how wasteful the input is — set expectations honestly.
+    if percent < 5:
+        st.info(
+            "This text is already lean, so there's little to trim. Savings are "
+            "highest on padded or repetitive prompts — try **Load example**, or "
+            "turn on **Caveman / Aggressive** mode in the sidebar."
+        )
+
     original_cost = measure(text, model=model).estimated_cost_usd
     optimized_cost = measure(optimized_text, model=model).estimated_cost_usd
     st.caption(
