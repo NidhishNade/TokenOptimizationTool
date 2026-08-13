@@ -3,6 +3,7 @@
 from .advisor import Suggestion, advise, find_repeated_blocks
 from .counter import Measurement, count_tokens, estimate_cost, measure
 from .engine import OptimizationResult, Step, optimize
+from .local_llm import LocalLLMError, is_available, llm_compress
 from .reducers import (
     abbreviate,
     caveman,
@@ -12,7 +13,7 @@ from .reducers import (
     remove_filler,
 )
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 __all__ = [
     # measuring (Phase 1)
@@ -35,5 +36,9 @@ __all__ = [
     "Suggestion",
     "advise",
     "find_repeated_blocks",
+    # local LLM compression (opt-in)
+    "LocalLLMError",
+    "is_available",
+    "llm_compress",
     "__version__",
 ]

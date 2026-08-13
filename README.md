@@ -65,6 +65,9 @@ token-optimizer prompt.txt --aggressive
 # Caveman mode (drop articles a/an/the, keep readable sentences)
 token-optimizer prompt.txt --caveman
 
+# Local LLM compression (free, offline; first run downloads a ~0.8GB model)
+token-optimizer prompt.txt --llm
+
 # Save the shortened text to a file
 token-optimizer prompt.txt --output short.txt
 
@@ -91,6 +94,20 @@ streamlit run app.py
 ```
 
 Then open http://localhost:8501.
+
+## Local LLM compression (optional)
+
+Rule-based reducers only *delete* words. To *rewrite* text shorter while keeping
+meaning, the tool can use a small language model that runs **entirely on your
+machine** via [gpt4all](https://github.com/nomic-ai/gpt4all) — free, offline, no
+API key. Your text never leaves your computer.
+
+```bash
+pip install -e ".[llm]"   # installs gpt4all
+token-optimizer prompt.txt --llm
+```
+
+The first run downloads a ~0.8 GB model file (once); after that it works offline.
 
 ## License
 
