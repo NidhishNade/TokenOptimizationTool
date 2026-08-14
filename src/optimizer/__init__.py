@@ -1,6 +1,7 @@
 """Token Optimizer — measure and reduce tokens in LLM prompts."""
 
 from .advisor import Suggestion, advise, find_repeated_blocks
+from .analytics import UsageStats
 from .counter import Measurement, count_tokens, estimate_cost, measure
 from .engine import OptimizationResult, Step, optimize
 from .local_llm import LocalLLMError, is_available, llm_compress
@@ -13,7 +14,7 @@ from .reducers import (
     remove_filler,
 )
 
-__version__ = "1.2.3"
+__version__ = "1.3.0"
 
 __all__ = [
     # measuring (Phase 1)
@@ -36,6 +37,8 @@ __all__ = [
     "Suggestion",
     "advise",
     "find_repeated_blocks",
+    # in-app usage analytics
+    "UsageStats",
     # local LLM compression (opt-in)
     "LocalLLMError",
     "is_available",

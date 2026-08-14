@@ -50,6 +50,7 @@ Built in phases:
 - [x] Phase 4 — CLI polish
 - [x] Phase 5 — Streamlit web UI
 - [x] Phase 6 — Visuals + extras 🎉
+- [x] Deployed live + in-app token analytics 📊
 
 ## Getting started
 

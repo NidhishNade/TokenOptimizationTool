@@ -23,7 +23,14 @@ import streamlit as st
 
 from optimizer import advise, count_tokens, extractive_summary, measure, optimize
 from optimizer import pricing
+from optimizer.analytics import UsageStats
 from optimizer.local_llm import LocalLLMError, is_available, llm_compress
+
+
+@st.cache_resource
+def get_usage_stats() -> UsageStats:
+    """One analytics accumulator shared across all sessions (resets on restart)."""
+    return UsageStats()
 
 # ---------------------------------------------------------------------------
 # Page setup
@@ -167,6 +174,18 @@ if text.strip():
     saved = original_tokens - final_tokens
     percent = (saved / original_tokens * 100) if original_tokens else 0.0
 
+    original_cost = measure(text, model=model).estimated_cost_usd
+    optimized_cost = measure(optimized_text, model=model).estimated_cost_usd
+    cost_saved = original_cost - optimized_cost
+
+    # Record this run in the shared analytics — but only once per distinct
+    # optimization. Streamlit reruns the whole script on every widget change, so
+    # we fingerprint the inputs and skip re-recording an identical result.
+    run_signature = (text, model, aggressive, caveman_mode, use_summary, keep_ratio, use_llm)
+    if st.session_state.get("_last_run_signature") != run_signature:
+        get_usage_stats().record(original_tokens, final_tokens, cost_saved)
+        st.session_state["_last_run_signature"] = run_signature
+
     st.subheader("Results")
     m1, m2, m3 = st.columns(3)
     m1.metric("Original", f"{original_tokens:,} tok")
@@ -181,12 +200,10 @@ if text.strip():
             "turn on **Caveman / Aggressive** mode in the sidebar."
         )
 
-    original_cost = measure(text, model=model).estimated_cost_usd
-    optimized_cost = measure(optimized_text, model=model).estimated_cost_usd
     st.caption(
         f"Estimated cost on **{model}**: "
         f"${original_cost:.6f} → ${optimized_cost:.6f} per call "
-        f"(saves ${original_cost - optimized_cost:.6f})"
+        f"(saves ${cost_saved:.6f})"
     )
 
     # --- Visual: before vs after -----------------------------------------
@@ -232,3 +249,34 @@ if text.strip():
                 st.info(s.message)
 else:
     st.info("Enter some text above (or click **Load example**) to see the savings.")
+
+# ---------------------------------------------------------------------------
+# Usage analytics — running totals across all runs since the app last restarted
+# ---------------------------------------------------------------------------
+stats = get_usage_stats()
+st.divider()
+st.subheader("📊 Token analytics")
+if stats.runs == 0:
+    st.caption("Run an optimization above and the totals will start filling in here.")
+else:
+    a1, a2, a3, a4 = st.columns(4)
+    a1.metric("Optimizations run", f"{stats.runs:,}")
+    a2.metric("Total tokens saved", f"{stats.total_tokens_saved:,}")
+    a3.metric("Average saved", f"{stats.average_percent_saved:.0f}%")
+    a4.metric("Est. cost saved", f"${stats.total_cost_saved_usd:.4f}")
+
+    if len(stats.history) > 1:
+        st.caption("Percent saved per run")
+        st.line_chart(
+            pd.DataFrame({"% saved": stats.history}),
+            color="#7bd88f",
+        )
+
+    st.caption(
+        f"Best single run: **{stats.best_percent_saved:.0f}%** saved · "
+        "totals are shared across visitors and reset when the app restarts."
+    )
+    if st.button("Reset analytics"):
+        stats.reset()
+        st.session_state.pop("_last_run_signature", None)
+        st.rerun()
