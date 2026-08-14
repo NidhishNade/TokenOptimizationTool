@@ -17,7 +17,7 @@ from .reducers import (
     simplify_phrases,
 )
 
-__version__ = "1.7.3"
+__version__ = "1.7.4"
 
 __all__ = [
     # measuring (Phase 1)

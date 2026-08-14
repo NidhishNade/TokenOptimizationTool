@@ -78,6 +78,9 @@ st.set_page_config(
     page_title="Token Optimizer",
     page_icon=str(LOGO_PATH),
     layout="centered",
+    # Start with the settings panel tucked away behind the top-left ›/hamburger
+    # toggle — the app works on safe defaults, so most visitors never open it.
+    initial_sidebar_state="collapsed",
     menu_items={"about": "Token Optimizer — measure and cut tokens in LLM prompts."},
 )
 
@@ -92,13 +95,17 @@ CARD_BORDER = "rgba(255,255,255,0.09)"
 st.markdown(
     f"""
     <style>
-      /* Hide Streamlit Community Cloud "Fork" / GitHub source chrome. */
-      [data-testid="stToolbar"],
+      /* Hide the Community Cloud "Fork" / Deploy / GitHub source chrome — but
+         NOT the whole toolbar, which also holds the sidebar-expand arrow we need
+         now that the settings panel starts collapsed. */
       [data-testid="stAppDeployButton"],
       [data-testid="stActionButtonIcon"],
-      .stAppToolbar,
+      [data-testid="stMainMenu"],
       header [data-testid="stHeaderActionElements"],
       a[href*="github.com"][target="_blank"] {{ display: none !important; }}
+
+      /* Keep the expand-settings arrow visible and give it an obvious pill. */
+      [data-testid="stExpandSidebarButton"] {{ display: flex !important; }}
 
       /* Tighten the top padding the hidden header leaves behind. */
       .block-container {{ padding-top: 2.4rem; max-width: 780px; }}
@@ -159,6 +166,18 @@ st.markdown(
       [data-testid="stExpander"] {{ border-radius: 12px; }}
       /* Sidebar gets a hair more separation. */
       section[data-testid="stSidebar"] {{ border-right: 1px solid {CARD_BORDER}; }}
+
+      /* The sidebar starts collapsed, so make its expand toggle obvious —
+         the default arrow is easy to miss in dark mode. */
+      [data-testid="stExpandSidebarButton"] {{
+        background: rgba(129,140,248,0.16) !important;
+        border: 1px solid rgba(129,140,248,0.5) !important;
+        border-radius: 10px !important;
+      }}
+      [data-testid="stExpandSidebarButton"] button,
+      [data-testid="stExpandSidebarButton"] svg {{
+        color: {INDIGO} !important; fill: {INDIGO} !important;
+      }}
     </style>
     """,
     unsafe_allow_html=True,
@@ -194,7 +213,7 @@ with st.expander("ℹ️  What does each setting do?"):
         "- **Filler remover** — cuts politeness/padding (*please, kindly, thank you so much*).\n"
         "- **Wordy-phrase simplifier** — swaps bloated phrases for exact shorter ones "
         "(*in order to → to*, *due to the fact that → because*) — 50+ verified pairs.\n\n"
-        "**Optional — in the sidebar:**\n"
+        "**Optional — open ⚙️ Settings (the › arrow, top-left):**\n"
         "- **Aggressive mode** — shorthand the model still understands "
         "(*you → u*, *documentation → docs*, *ten → 10*). Can shift tone.\n"
         "- **Caveman mode** — drops *a / an / the*; still reads fine.\n"
@@ -386,7 +405,8 @@ if text.strip():
         st.info(
             "This text is already lean, so there's nothing safe to trim. Savings "
             "are highest on padded or repetitive prompts — tap an **example** "
-            "above, or turn on **🔥 Max savings** in the sidebar."
+            "above, or open **⚙️ Settings** (the › arrow, top-left) and turn on "
+            "**🔥 Max savings**."
         )
 
     # Cost: one call is a fraction of a cent on cheap models, so show the saving
