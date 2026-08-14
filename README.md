@@ -1,5 +1,9 @@
 # Token Optimizer
 
+**🚀 Live demo: [nidhish-token-optimizer.streamlit.app](https://nidhish-token-optimizer.streamlit.app)**
+
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://nidhish-token-optimizer.streamlit.app)
+
 A free, open-source tool that measures and reduces the number of **tokens** in your
 LLM prompts — so your calls to Claude / GPT are **cheaper, faster, and fit more in**.
 
