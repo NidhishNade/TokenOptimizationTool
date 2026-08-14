@@ -11,12 +11,13 @@ from .reducers import (
     extractive_summary,
     normalize_whitespace,
     numbers_to_digits,
+    remove_duplicate_blocks,
     remove_duplicate_sentences,
     remove_filler,
     simplify_phrases,
 )
 
-__version__ = "1.6.0"
+__version__ = "1.7.0"
 
 __all__ = [
     # measuring (Phase 1)
@@ -29,6 +30,7 @@ __all__ = [
     "Step",
     "optimize",
     "normalize_whitespace",
+    "remove_duplicate_blocks",
     "remove_duplicate_sentences",
     "remove_filler",
     "simplify_phrases",

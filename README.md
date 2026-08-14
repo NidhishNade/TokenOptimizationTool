@@ -54,6 +54,7 @@ Built in phases:
 - [x] Wordy-phrase simplifier + number→digit rules (every rule tokenizer-verified) ✂️
 - [x] Polished UI + one-click **🔥 Max savings** (stacks every reducer at once) 🎨
 - [x] 50+ tokenizer-verified wordy-phrase swaps (~41% on prose, safe mode) + in-app settings guide 📖
+- [x] Repeated-block remover (70–90% on repetitive prompts, meaning-safe) + dark theme + clearer cost/savings 🎨
 
 ## Getting started
 

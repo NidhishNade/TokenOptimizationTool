@@ -1,8 +1,17 @@
 # Streamlit configuration for the hosted app.
-#
+
 # toolbarMode = "minimal" hides the default developer toolbar items in the
-# top-right of the app — including the "Fork", the GitHub source link, and the
-# "View app source" / "Report a bug" menu — so visitors can't jump to the repo
-# from the app itself.
+# top-right of the app (Fork, GitHub source link, "View app source" / "Report a
+# bug") so visitors can't jump to the repo from the app itself.
 [client]
 toolbarMode = "minimal"
+
+# A deliberate, polished dark theme. Indigo is the brand colour; emerald green
+# is reserved for "savings" cues throughout the UI (see app.py).
+[theme]
+base = "dark"
+primaryColor = "#818cf8"              # indigo-400 — buttons, sliders, accents
+backgroundColor = "#0e1117"           # app background
+secondaryBackgroundColor = "#161a25"  # cards, sidebar, inputs
+textColor = "#e6e8ef"                 # primary text
+font = "sans serif"

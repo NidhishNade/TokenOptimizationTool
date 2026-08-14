@@ -19,6 +19,7 @@ Reducer = Callable[[str], str]
 # The SAFE pipeline: meaning-preserving reducers, applied in this order.
 # Whitespace runs last as a final tidy-up.
 SAFE_PIPELINE: list[tuple[str, str, Reducer]] = [
+    ("remove_duplicate_blocks", "Drop repeated paragraphs / blocks", reducers.remove_duplicate_blocks),
     ("remove_duplicates", "Drop word-for-word repeated sentences", reducers.remove_duplicate_sentences),
     ("simplify_phrases", "Swap wordy phrases for shorter equivalents", reducers.simplify_phrases),
     ("remove_filler", "Remove politeness / padding words", reducers.remove_filler),

@@ -4,8 +4,41 @@ from optimizer import (
     count_tokens,
     numbers_to_digits,
     optimize,
+    remove_duplicate_blocks,
     simplify_phrases,
 )
+
+
+class TestRemoveDuplicateBlocks:
+    def test_drops_exact_repeated_block(self):
+        block = "You are a helpful analyst. Cite every source."
+        text = f"{block}\n\nTask A.\n\n{block}\n\nTask B."
+        out = remove_duplicate_blocks(text)
+        assert out.count("You are a helpful analyst") == 1
+        assert "Task A." in out and "Task B." in out
+
+    def test_ignores_case_and_whitespace(self):
+        text = "Follow   the guide.\n\nDo it.\n\nfollow the guide.\n\nDo it two."
+        out = remove_duplicate_blocks(text)
+        # The case/space variant of the guide block collapses to one occurrence
+        # (kept block keeps its original spacing, so match on the word "guide").
+        assert out.lower().count("guide") == 1
+
+    def test_keeps_unique_blocks(self):
+        text = "Block one.\n\nBlock two.\n\nBlock three."
+        assert remove_duplicate_blocks(text) == text
+
+    def test_big_savings_on_repetitive_prompt(self):
+        block = "Context paragraph with several meaningful words repeated here."
+        text = "\n\n".join([f"{block}\n\nQ{i}?" for i in range(6)])
+        result = optimize(text)  # safe mode
+        assert result.percent_saved > 50  # redundant blocks removed, meaning kept
+
+    def test_in_default_pipeline(self):
+        block = "Same instruction block here."
+        text = f"{block}\n\nfirst.\n\n{block}\n\nsecond."
+        out = optimize(text).optimized_text
+        assert out.lower().count("same instruction block") == 1
 
 
 class TestSimplifyPhrases:

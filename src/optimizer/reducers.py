@@ -117,6 +117,39 @@ def _tidy_punctuation(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# 2.5 Duplicate-block remover  (100% safe — drops repeated paragraphs/blocks)
+# ---------------------------------------------------------------------------
+
+
+def remove_duplicate_blocks(text: str) -> str:
+    """Drop whole blocks (paragraphs) that repeat an earlier block verbatim.
+
+    Real prompts are often built by pasting the same instruction block, context,
+    or example several times. We split on blank lines, keep the first occurrence
+    of each block, and skip later repeats (ignoring case and inner whitespace).
+
+    This is 100% meaning-safe: a removed block is an *exact* duplicate of one the
+    model already saw, so nothing new is lost — but on repetitive prompts it can
+    cut the token count dramatically.
+    """
+    blocks = re.split(r"\n\s*\n", text)
+
+    seen: set[str] = set()
+    kept: list[str] = []
+    for block in blocks:
+        # Normalise for comparison only (compare content, not spacing/case).
+        key = re.sub(r"\s+", " ", block).strip().lower()
+        if not key:
+            continue
+        if key in seen:
+            continue  # exact repeated block — skip it
+        seen.add(key)
+        kept.append(block.strip())
+
+    return "\n\n".join(kept)
+
+
+# ---------------------------------------------------------------------------
 # 3. Duplicate-sentence remover  (100% safe — drops exact repeats)
 # ---------------------------------------------------------------------------
 

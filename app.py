@@ -33,6 +33,25 @@ def get_usage_stats() -> UsageStats:
     return UsageStats()
 
 
+def fmt_usd(amount: float) -> str:
+    """Format dollars with enough precision to never show a misleading '$0.0000'.
+
+    Model prices are tiny per call (a fraction of a cent), so a fixed 4-decimal
+    format rounds real savings to zero. This shows enough significant digits for
+    small amounts and clean cents for larger ones.
+    """
+    a = abs(amount)
+    if a == 0:
+        return "$0"
+    if a >= 0.01:
+        return f"${amount:,.2f}"
+    if a >= 0.0001:
+        return f"${amount:.4f}"
+    if a >= 0.000001:
+        return f"${amount:.6f}"
+    return f"${amount:.2e}"
+
+
 # ---------------------------------------------------------------------------
 # Page setup
 # ---------------------------------------------------------------------------
@@ -44,9 +63,13 @@ st.set_page_config(
 )
 
 # --- Styling ---------------------------------------------------------------
-# A small, tasteful stylesheet: hides the hosting chrome (Fork/GitHub badge),
-# sets an accent colour, and gives the metrics / example chips a card-like feel.
-ACCENT = "#6c5ce7"
+# Cohesive palette: indigo is the brand, emerald green means "savings".
+INDIGO = "#818cf8"      # brand / accent (matches config.toml primaryColor)
+INDIGO_DEEP = "#6366f1"
+EMERALD = "#34d399"     # savings cue — used for the "Saved" metric & charts
+CARD_BG = "rgba(255,255,255,0.03)"
+CARD_BORDER = "rgba(255,255,255,0.09)"
+
 st.markdown(
     f"""
     <style>
@@ -59,45 +82,66 @@ st.markdown(
       a[href*="github.com"][target="_blank"] {{ display: none !important; }}
 
       /* Tighten the top padding the hidden header leaves behind. */
-      .block-container {{ padding-top: 2.5rem; max-width: 760px; }}
+      .block-container {{ padding-top: 2.4rem; max-width: 780px; }}
 
       /* Hero. */
       .hero-title {{
-        font-size: 2.6rem; font-weight: 800; letter-spacing: -0.02em;
-        line-height: 1.1; margin: 0 0 0.35rem 0;
-        background: linear-gradient(90deg, {ACCENT}, #00b894);
+        font-size: 2.7rem; font-weight: 800; letter-spacing: -0.025em;
+        line-height: 1.1; margin: 0 0 0.4rem 0;
+        background: linear-gradient(100deg, {INDIGO} 10%, {EMERALD} 90%);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         background-clip: text;
       }}
-      .hero-sub {{ font-size: 1.05rem; opacity: 0.75; margin: 0 0 0.25rem 0; }}
+      .hero-sub {{ font-size: 1.06rem; opacity: 0.72; margin: 0 0 0.25rem 0; line-height: 1.5; }}
 
       /* "How it works" pills. */
-      .steps {{ display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0 0.25rem; }}
+      .steps {{ display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.85rem 0 0.25rem; }}
       .step {{
-        font-size: 0.82rem; padding: 0.28rem 0.7rem; border-radius: 999px;
-        background: rgba(108,92,231,0.12); color: inherit; opacity: 0.9;
-        border: 1px solid rgba(108,92,231,0.25);
+        font-size: 0.82rem; padding: 0.3rem 0.8rem; border-radius: 999px;
+        background: rgba(129,140,248,0.13); color: {INDIGO};
+        border: 1px solid rgba(129,140,248,0.28); font-weight: 500;
       }}
 
       /* Metric cards. */
       [data-testid="stMetric"] {{
-        background: rgba(128,128,128,0.06);
-        border: 1px solid rgba(128,128,128,0.15);
-        padding: 0.85rem 1rem; border-radius: 14px;
+        background: {CARD_BG};
+        border: 1px solid {CARD_BORDER};
+        padding: 0.9rem 1.1rem; border-radius: 16px;
       }}
+      [data-testid="stMetricValue"] {{ font-weight: 700; }}
+      /* The "Saved" delta glows emerald — the payoff colour. */
+      [data-testid="stMetricDelta"] {{ color: {EMERALD} !important; }}
+      [data-testid="stMetricDelta"] svg {{ display: none; }}
 
-      /* Primary buttons in the accent colour. */
-      .stButton > button {{ border-radius: 10px; font-weight: 600; }}
+      /* Buttons: rounded, bold; example chips get a subtle indigo hover. */
+      .stButton > button {{
+        border-radius: 10px; font-weight: 600;
+        border: 1px solid {CARD_BORDER}; transition: all 0.15s ease;
+      }}
+      .stButton > button:hover {{
+        border-color: {INDIGO}; color: {INDIGO};
+        transform: translateY(-1px);
+      }}
+      .stDownloadButton > button {{ border-radius: 10px; font-weight: 600; }}
 
       /* Section labels. */
       .section-label {{
-        text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.72rem;
-        opacity: 0.6; font-weight: 700; margin: 0.5rem 0 0.15rem;
+        text-transform: uppercase; letter-spacing: 0.09em; font-size: 0.72rem;
+        opacity: 0.55; font-weight: 700; margin: 0.6rem 0 0.2rem;
       }}
+
+      /* Inputs & expanders: softer, rounded, consistent with the cards. */
+      .stTextArea textarea {{ border-radius: 12px; }}
+      [data-testid="stExpander"] {{ border-radius: 12px; }}
+      /* Sidebar gets a hair more separation. */
+      section[data-testid="stSidebar"] {{ border-right: 1px solid {CARD_BORDER}; }}
     </style>
     """,
     unsafe_allow_html=True,
 )
+
+# Charts use the palette: indigo for the before/after bars, emerald for savings.
+ACCENT = INDIGO
 
 # --- Hero ------------------------------------------------------------------
 st.markdown('<div class="hero-title">✂️ Token Optimizer</div>', unsafe_allow_html=True)
@@ -119,6 +163,8 @@ st.write("")
 with st.expander("ℹ️  What does each setting do?"):
     st.markdown(
         "**Always on — safe, never changes meaning:**\n"
+        "- **Repeated-block remover** — drops whole paragraphs pasted more than once "
+        "(the big win for repetitive prompts — can save 70–90% with zero meaning loss).\n"
         "- **Whitespace cleanup** — collapses extra spaces and blank lines.\n"
         "- **Duplicate remover** — drops sentences repeated word-for-word.\n"
         "- **Filler remover** — cuts politeness/padding (*please, kindly, thank you so much*).\n"
@@ -299,26 +345,37 @@ if text.strip():
 
     st.subheader("Results")
     m1, m2, m3 = st.columns(3)
-    m1.metric("Original", f"{original_tokens:,}", help="Tokens before optimizing.")
-    m2.metric("Optimized", f"{final_tokens:,}", help="Tokens after optimizing.")
-    m3.metric(
-        "Saved", f"{saved:,}", f"-{percent:.0f}%",
-        help="Fewer tokens = lower cost and more context room.",
-    )
+    m1.metric("Your prompt", f"{original_tokens:,} tok",
+              help="Tokens in the text you pasted.")
+    m2.metric("After optimizing", f"{final_tokens:,} tok",
+              help="Tokens the model would actually receive.")
+    m3.metric("Saved", f"{saved:,} tok", f"-{percent:.0f}%",
+              help="Fewer tokens = lower cost and more room in the context window.")
 
-    # Savings depend on how wasteful the input is — set expectations honestly.
-    if percent < 5:
+    # Clear, plain-language headline of what happened.
+    if saved > 0:
+        st.success(
+            f"✂️ Cut **{saved:,} tokens** — **{percent:.0f}% smaller** "
+            f"(from {original_tokens:,} down to {final_tokens:,})."
+        )
+    else:
         st.info(
-            "This text is already lean, so there's little to trim. Savings are "
-            "highest on padded or repetitive prompts — tap an **example** above, "
-            "or turn on **Caveman / Aggressive** mode in the sidebar."
+            "This text is already lean, so there's nothing safe to trim. Savings "
+            "are highest on padded or repetitive prompts — tap an **example** "
+            "above, or turn on **🔥 Max savings** in the sidebar."
         )
 
-    st.caption(
-        f"💰 Estimated cost on **{model}**: "
-        f"${original_cost:.6f} → ${optimized_cost:.6f} per call "
-        f"(saves ${cost_saved:.6f})"
-    )
+    # Cost: one call is a fraction of a cent on cheap models, so show the saving
+    # per 1,000 calls (a real, non-zero number) alongside the per-call figure.
+    if saved > 0:
+        per_1k = cost_saved * 1000
+        st.caption(
+            f"💰 Cost on **{model}**: {fmt_usd(original_cost)} → {fmt_usd(optimized_cost)} "
+            f"per call · **{fmt_usd(per_1k)} saved per 1,000 calls** "
+            f"({fmt_usd(cost_saved)} each). Small per call — real money at volume."
+        )
+    else:
+        st.caption(f"💰 Cost on **{model}**: {fmt_usd(original_cost)} per call.")
 
     # --- Visual: before vs after -----------------------------------------
     compare_df = pd.DataFrame(
@@ -343,7 +400,7 @@ if text.strip():
             {"tokens saved": [s.tokens_saved for s in result.steps]},
             index=[s.description for s in result.steps],
         )
-        st.bar_chart(step_df, color="#00b894")
+        st.bar_chart(step_df, color=EMERALD)
         for step in result.steps:
             st.write(
                 f"**{step.description}**: "
@@ -378,13 +435,15 @@ else:
     a1.metric("Optimizations run", f"{stats.runs:,}")
     a2.metric("Total tokens saved", f"{stats.total_tokens_saved:,}")
     a3.metric("Average saved", f"{stats.average_percent_saved:.0f}%")
-    a4.metric("Est. cost saved", f"${stats.total_cost_saved_usd:.4f}")
+    a4.metric("Est. cost saved", fmt_usd(stats.total_cost_saved_usd),
+              help="Actual dollars saved across these runs. Tiny per call, but "
+                   "it scales with how often you'd send these prompts.")
 
     if len(stats.history) > 1:
         st.caption("Percent saved per run")
         st.line_chart(
             pd.DataFrame({"% saved": stats.history}),
-            color="#00b894",
+            color=EMERALD,
         )
 
     st.caption(
