@@ -125,15 +125,35 @@ Both are thin layers over `engine.optimize()`:
 
 ---
 
-## Dependencies (all free / open-source)
+## Tech stack (all free / open-source)
 
-| Package | Role | Required? |
+| Tool | Role | Required? |
 |---|---|---|
-| `tiktoken` | Token counting | **Required** |
-| `pytest` | Tests | Optional (`[dev]`) |
-| `streamlit` | Web UI | Optional (`[ui]`) |
-| `gpt4all` | Offline local-LLM compression | Optional (`[llm]`) |
+| **Python** (3.9+) | Core language | **Required** |
+| **tiktoken** | Exact, offline token counting (`cl100k_base` encoding) | **Required** |
+| **argparse** | Terminal CLI (stdlib) | **Required** (built in) |
+| **dataclasses** | Typed result/report objects (stdlib) | **Required** (built in) |
+| **pytest** | 90+ tests, including token-invariant guardrails | Optional (`[dev]`) |
+| **Streamlit** | Pure-Python web UI | Optional (`[ui]`) |
+| **gpt4all** | Offline local-LLM compression (no API, no keys) | Optional (`[llm]`) |
+| **Streamlit Community Cloud** | Free hosting for the live app | Deploy only |
+| **TOML** (`pyproject.toml`) | Packaging, CLI entry point, optional dependency groups | Build config |
+| **Git + GitHub** | Version control, semver-tagged releases, MIT license | Project infra |
 
-Packaging is defined in a single `pyproject.toml` (src/ layout, a
-`token-optimizer` console entry point, and optional dependency groups so users
-install only what they need).
+The only hard runtime dependency is **tiktoken** — everything the core tool does
+(counting, reducing, pricing) runs on the Python standard library plus tiktoken.
+The web UI, tests, and local-LLM features are opt-in extras.
+
+### Why these choices
+
+- **Python** — fast to iterate, and the natural home for `tiktoken`.
+- **tiktoken over a hand-rolled counter** — it tokenizes the exact way the model
+  does, so "before vs after" numbers are trustworthy, not approximations.
+- **Streamlit over a JS frontend** — a working web UI in pure Python, no separate
+  frontend stack, framework, or build step to maintain.
+- **gpt4all (optional) over a paid API** — offline, free, and keeps the "no keys,
+  nothing sent to a provider" guarantee intact even for the LLM feature.
+- **TOML / pyproject.toml** — one standard file defines the package, the
+  `token-optimizer` console command, and optional dependency groups (`[dev]`,
+  `[ui]`, `[llm]`) so users install only what they need. The project uses a `src/`
+  layout so tests import the installed package, not loose files.
