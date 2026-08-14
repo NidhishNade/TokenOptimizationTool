@@ -52,6 +52,16 @@ def fmt_usd(amount: float) -> str:
     return f"${amount:.2e}"
 
 
+def usd_md(amount: float) -> str:
+    """Same as fmt_usd but safe inside Streamlit markdown.
+
+    Streamlit renders ``$...$`` as LaTeX math, which silently eats the dollar
+    signs and collapses the spaces. Escaping the ``$`` keeps it literal in
+    st.caption / st.markdown / help text.
+    """
+    return fmt_usd(amount).replace("$", "\\$")
+
+
 # ---------------------------------------------------------------------------
 # Page setup
 # ---------------------------------------------------------------------------
@@ -108,7 +118,12 @@ st.markdown(
         border: 1px solid {CARD_BORDER};
         padding: 0.9rem 1.1rem; border-radius: 16px;
       }}
-      [data-testid="stMetricValue"] {{ font-weight: 700; }}
+      [data-testid="stMetricValue"] {{ font-weight: 700; font-size: 1.7rem; }}
+      /* Let metric labels wrap instead of truncating with an ellipsis. */
+      [data-testid="stMetricLabel"], [data-testid="stMetricLabel"] p {{
+        white-space: normal !important; overflow: visible !important;
+        text-overflow: clip !important;
+      }}
       /* The "Saved" delta glows emerald — the payoff colour. */
       [data-testid="stMetricDelta"] {{ color: {EMERALD} !important; }}
       [data-testid="stMetricDelta"] svg {{ display: none; }}
@@ -370,12 +385,12 @@ if text.strip():
     if saved > 0:
         per_1k = cost_saved * 1000
         st.caption(
-            f"💰 Cost on **{model}**: {fmt_usd(original_cost)} → {fmt_usd(optimized_cost)} "
-            f"per call · **{fmt_usd(per_1k)} saved per 1,000 calls** "
-            f"({fmt_usd(cost_saved)} each). Small per call — real money at volume."
+            f"💰 Cost on **{model}**: {usd_md(original_cost)} → {usd_md(optimized_cost)} "
+            f"per call · **{usd_md(per_1k)} saved per 1,000 calls** "
+            f"({usd_md(cost_saved)} each). Small per call — real money at volume."
         )
     else:
-        st.caption(f"💰 Cost on **{model}**: {fmt_usd(original_cost)} per call.")
+        st.caption(f"💰 Cost on **{model}**: {usd_md(original_cost)} per call.")
 
     # --- Visual: before vs after -----------------------------------------
     compare_df = pd.DataFrame(
@@ -439,10 +454,10 @@ else:
     a1.metric("Optimizations run", f"{stats.runs:,}")
     a2.metric("Total tokens saved", f"{stats.total_tokens_saved:,}")
     a3.metric("Average saved", f"{stats.average_percent_saved:.0f}%")
-    a4.metric("Cost saved / 1K runs", fmt_usd(cost_per_1k_runs),
+    a4.metric("Cost / 1K runs", fmt_usd(cost_per_1k_runs),
               help="Your average saving scaled to 1,000 runs — a readable figure, "
                    f"since one call is a fraction of a cent. Actual so far: "
-                   f"{fmt_usd(stats.total_cost_saved_usd)}.")
+                   f"{usd_md(stats.total_cost_saved_usd)}.")
 
     if len(stats.history) > 1:
         st.caption("Percent saved per run")
