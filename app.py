@@ -30,6 +30,23 @@ from optimizer.local_llm import LocalLLMError, is_available, llm_compress
 # ---------------------------------------------------------------------------
 st.set_page_config(page_title="Token Optimizer", page_icon="✂️", layout="centered")
 
+# Hide the Streamlit Community Cloud "Fork" / GitHub source badge and toolbar so
+# visitors can't jump to the repo from the app. These target the hosting chrome
+# injected into the app header on Community Cloud.
+st.markdown(
+    """
+    <style>
+      [data-testid="stToolbar"] {display: none !important;}
+      [data-testid="stAppDeployButton"] {display: none !important;}
+      [data-testid="stActionButtonIcon"] {display: none !important;}
+      .stAppToolbar {display: none !important;}
+      header [data-testid="stHeaderActionElements"] {display: none !important;}
+      a[href*="github.com"][target="_blank"] {display: none !important;}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.title("✂️ Token Optimizer")
 st.caption(
     "Measure and reduce the tokens in your LLM prompts — cheaper, faster, "
