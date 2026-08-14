@@ -431,13 +431,18 @@ st.subheader("📊 Token analytics")
 if stats.runs == 0:
     st.caption("Run an optimization above and the totals will start filling in here.")
 else:
+    # One call saves a fraction of a cent, so the raw cumulative total renders as
+    # unreadable scientific notation. Scale it to "per 1,000 runs" for a clean,
+    # meaningful number; keep the raw actual in the tooltip.
+    cost_per_1k_runs = (stats.total_cost_saved_usd / stats.runs * 1000) if stats.runs else 0.0
     a1, a2, a3, a4 = st.columns(4)
     a1.metric("Optimizations run", f"{stats.runs:,}")
     a2.metric("Total tokens saved", f"{stats.total_tokens_saved:,}")
     a3.metric("Average saved", f"{stats.average_percent_saved:.0f}%")
-    a4.metric("Est. cost saved", fmt_usd(stats.total_cost_saved_usd),
-              help="Actual dollars saved across these runs. Tiny per call, but "
-                   "it scales with how often you'd send these prompts.")
+    a4.metric("Cost saved / 1K runs", fmt_usd(cost_per_1k_runs),
+              help="Your average saving scaled to 1,000 runs — a readable figure, "
+                   f"since one call is a fraction of a cent. Actual so far: "
+                   f"{fmt_usd(stats.total_cost_saved_usd)}.")
 
     if len(stats.history) > 1:
         st.caption("Percent saved per run")

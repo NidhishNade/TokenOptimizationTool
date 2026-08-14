@@ -1,6 +1,6 @@
 [project]
 name = "token-optimizer"
-version = "1.7.0"
+version = "1.7.1"
 description = "Measure and reduce tokens in LLM prompts."
 readme = "README.md"
 requires-python = ">=3.9"
