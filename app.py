@@ -32,48 +32,104 @@ def get_usage_stats() -> UsageStats:
     """One analytics accumulator shared across all sessions (resets on restart)."""
     return UsageStats()
 
+
 # ---------------------------------------------------------------------------
 # Page setup
 # ---------------------------------------------------------------------------
-st.set_page_config(page_title="Token Optimizer", page_icon="✂️", layout="centered")
+st.set_page_config(
+    page_title="Token Optimizer",
+    page_icon="✂️",
+    layout="centered",
+    menu_items={"about": "Token Optimizer — measure and cut tokens in LLM prompts."},
+)
 
-# Hide the Streamlit Community Cloud "Fork" / GitHub source badge and toolbar so
-# visitors can't jump to the repo from the app. These target the hosting chrome
-# injected into the app header on Community Cloud.
+# --- Styling ---------------------------------------------------------------
+# A small, tasteful stylesheet: hides the hosting chrome (Fork/GitHub badge),
+# sets an accent colour, and gives the metrics / example chips a card-like feel.
+ACCENT = "#6c5ce7"
 st.markdown(
-    """
+    f"""
     <style>
-      [data-testid="stToolbar"] {display: none !important;}
-      [data-testid="stAppDeployButton"] {display: none !important;}
-      [data-testid="stActionButtonIcon"] {display: none !important;}
-      .stAppToolbar {display: none !important;}
-      header [data-testid="stHeaderActionElements"] {display: none !important;}
-      a[href*="github.com"][target="_blank"] {display: none !important;}
+      /* Hide Streamlit Community Cloud "Fork" / GitHub source chrome. */
+      [data-testid="stToolbar"],
+      [data-testid="stAppDeployButton"],
+      [data-testid="stActionButtonIcon"],
+      .stAppToolbar,
+      header [data-testid="stHeaderActionElements"],
+      a[href*="github.com"][target="_blank"] {{ display: none !important; }}
+
+      /* Tighten the top padding the hidden header leaves behind. */
+      .block-container {{ padding-top: 2.5rem; max-width: 760px; }}
+
+      /* Hero. */
+      .hero-title {{
+        font-size: 2.6rem; font-weight: 800; letter-spacing: -0.02em;
+        line-height: 1.1; margin: 0 0 0.35rem 0;
+        background: linear-gradient(90deg, {ACCENT}, #00b894);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }}
+      .hero-sub {{ font-size: 1.05rem; opacity: 0.75; margin: 0 0 0.25rem 0; }}
+
+      /* "How it works" pills. */
+      .steps {{ display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0 0.25rem; }}
+      .step {{
+        font-size: 0.82rem; padding: 0.28rem 0.7rem; border-radius: 999px;
+        background: rgba(108,92,231,0.12); color: inherit; opacity: 0.9;
+        border: 1px solid rgba(108,92,231,0.25);
+      }}
+
+      /* Metric cards. */
+      [data-testid="stMetric"] {{
+        background: rgba(128,128,128,0.06);
+        border: 1px solid rgba(128,128,128,0.15);
+        padding: 0.85rem 1rem; border-radius: 14px;
+      }}
+
+      /* Primary buttons in the accent colour. */
+      .stButton > button {{ border-radius: 10px; font-weight: 600; }}
+
+      /* Section labels. */
+      .section-label {{
+        text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.72rem;
+        opacity: 0.6; font-weight: 700; margin: 0.5rem 0 0.15rem;
+      }}
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-st.title("✂️ Token Optimizer")
-st.caption(
-    "Measure and reduce the tokens in your LLM prompts — cheaper, faster, "
-    "and fits more in the context window."
+# --- Hero ------------------------------------------------------------------
+st.markdown('<div class="hero-title">✂️ Token Optimizer</div>', unsafe_allow_html=True)
+st.markdown(
+    '<p class="hero-sub">Trim the wasted tokens out of your AI prompts — '
+    'cheaper calls, faster replies, more room in the context window.</p>',
+    unsafe_allow_html=True,
 )
+st.markdown(
+    '<div class="steps">'
+    '<span class="step">1 · Paste your prompt</span>'
+    '<span class="step">2 · We measure &amp; trim it</span>'
+    '<span class="step">3 · See what you saved</span>'
+    "</div>",
+    unsafe_allow_html=True,
+)
+st.write("")
 
 # One-click example prompts, each showing off a different kind of waste.
 PRESETS: dict[str, str] = {
-    "Polite padding + a repeat": (
+    "🙇 Polite padding": (
         "Please could you kindly summarize the following report for me. "
         "It is important to note that I would like you to focus on the key findings. "
         "Please could you kindly summarize the following report for me. "
         "Thank you so much, I really appreciate it."
     ),
-    "Wordy phrases (aggressive shines)": (
+    "🗯️ Wordy phrases": (
         "In order to complete this as soon as possible, please review the "
         "documentation because you are the owner of the application. With respect "
         "to the number of issues, there are approximately ten that you must fix."
     ),
-    "Repeated instruction block (advisor)": (
+    "🔁 Repeated block": (
         "Follow the full company style guide and cite every source you use.\n\n"
         "Analyse the Q1 revenue results.\n\n"
         "Follow the full company style guide and cite every source you use.\n\n"
@@ -81,32 +137,57 @@ PRESETS: dict[str, str] = {
         "Follow the full company style guide and cite every source you use."
     ),
 }
-EXAMPLE = PRESETS["Polite padding + a repeat"]
 
 # ---------------------------------------------------------------------------
 # Sidebar controls
 # ---------------------------------------------------------------------------
 with st.sidebar:
-    st.header("Settings")
+    st.markdown("### ⚙️ Settings")
+
+    st.markdown('<p class="section-label">Cost estimate</p>', unsafe_allow_html=True)
     model = st.selectbox(
-        "Model (for cost estimate)",
+        "Model",
         options=sorted(pricing.PRICE_PER_MILLION_TOKENS),
         index=sorted(pricing.PRICE_PER_MILLION_TOKENS).index(pricing.DEFAULT_MODEL),
+        label_visibility="collapsed",
     )
-    aggressive = st.checkbox(
+
+    st.markdown('<p class="section-label">Reduction strength</p>', unsafe_allow_html=True)
+    max_mode = st.checkbox(
+        "🔥 Max savings",
+        help="Turn on EVERY reducer at once — aggressive shorthand, caveman, and "
+             "extractive summary. Squeezes the most tokens, but it's lossy: it can "
+             "change grammar and drop less-important sentences. Check the output.",
+    )
+    if max_mode:
+        st.caption("🔥 All reducers active — output is lossy, review it before using.")
+
+    # The individual checkboxes are pure UI. Max mode is OR-ed into the effective
+    # flags at point of use, so it reliably forces every reducer on regardless of
+    # each checkbox's own state (avoids Streamlit's value=/disabled= rerun quirks).
+    _aggressive = st.checkbox(
         "Aggressive mode",
-        help="Also apply opt-in shorthand (you→u, documentation→docs). Can change meaning.",
+        help="Also apply opt-in shorthand (you→u, documentation→docs, "
+             "spelled-out numbers→digits). Can change meaning.",
     )
-    caveman_mode = st.checkbox(
+    _caveman = st.checkbox(
         "Caveman mode",
         help="Drop articles (a/an/the) but keep readable sentences.",
     )
-    use_summary = st.checkbox(
+
+    st.markdown('<p class="section-label">Lossy options</p>', unsafe_allow_html=True)
+    _summary = st.checkbox(
         "Extractive summary",
         help="Keep only the most important sentences. Lossy — drops content.",
     )
+
+    # Effective flags actually passed to the pipeline.
+    aggressive = _aggressive or max_mode
+    caveman_mode = _caveman or max_mode
+    use_summary = _summary or max_mode
+
     keep_ratio = st.slider(
-        "Summary: keep how much?",
+        "Keep how much?",
         min_value=0.2, max_value=1.0, value=0.6, step=0.1,
         disabled=not use_summary,
     )
@@ -134,18 +215,22 @@ with st.sidebar:
 if "text" not in st.session_state:
     st.session_state.text = ""
 
-col_preset, col_load, col_clear = st.columns([2, 1, 1])
-chosen_preset = col_preset.selectbox("Examples", list(PRESETS), label_visibility="collapsed")
-if col_load.button("Load", use_container_width=True):
-    st.session_state.text = PRESETS[chosen_preset]
-if col_clear.button("Clear", use_container_width=True):
+# Example chips: clicking one loads it straight into the box — no second step.
+st.markdown('<p class="section-label">Try an example</p>', unsafe_allow_html=True)
+chip_cols = st.columns(len(PRESETS) + 1)
+for col, (label, sample) in zip(chip_cols, PRESETS.items()):
+    if col.button(label, use_container_width=True):
+        st.session_state.text = sample
+        st.session_state.pop("_last_run_signature", None)
+if chip_cols[-1].button("Clear", use_container_width=True):
     st.session_state.text = ""
 
 text = st.text_area(
     "Your prompt / text",
     key="text",
     height=200,
-    placeholder="Paste a prompt here…",
+    placeholder="Paste a prompt here — or tap an example above…",
+    label_visibility="collapsed",
 )
 
 # ---------------------------------------------------------------------------
@@ -188,20 +273,23 @@ if text.strip():
 
     st.subheader("Results")
     m1, m2, m3 = st.columns(3)
-    m1.metric("Original", f"{original_tokens:,} tok")
-    m2.metric("Optimized", f"{final_tokens:,} tok")
-    m3.metric("Saved", f"{saved:,} tok", f"-{percent:.0f}%")
+    m1.metric("Original", f"{original_tokens:,}", help="Tokens before optimizing.")
+    m2.metric("Optimized", f"{final_tokens:,}", help="Tokens after optimizing.")
+    m3.metric(
+        "Saved", f"{saved:,}", f"-{percent:.0f}%",
+        help="Fewer tokens = lower cost and more context room.",
+    )
 
     # Savings depend on how wasteful the input is — set expectations honestly.
     if percent < 5:
         st.info(
             "This text is already lean, so there's little to trim. Savings are "
-            "highest on padded or repetitive prompts — try **Load example**, or "
-            "turn on **Caveman / Aggressive** mode in the sidebar."
+            "highest on padded or repetitive prompts — tap an **example** above, "
+            "or turn on **Caveman / Aggressive** mode in the sidebar."
         )
 
     st.caption(
-        f"Estimated cost on **{model}**: "
+        f"💰 Estimated cost on **{model}**: "
         f"${original_cost:.6f} → ${optimized_cost:.6f} per call "
         f"(saves ${cost_saved:.6f})"
     )
@@ -211,7 +299,7 @@ if text.strip():
         {"tokens": [original_tokens, final_tokens]},
         index=["Original", "Optimized"],
     )
-    st.bar_chart(compare_df, color="#4c9be8", horizontal=True)
+    st.bar_chart(compare_df, color=ACCENT, horizontal=True)
 
     st.subheader("Optimized text")
     st.code(optimized_text, language=None)
@@ -220,15 +308,16 @@ if text.strip():
         data=optimized_text,
         file_name="optimized.txt",
         mime="text/plain",
+        use_container_width=True,
     )
 
-    with st.expander("Per-step breakdown"):
+    with st.expander("🔬 Per-step breakdown"):
         # A small chart of how many tokens each reducer saved.
         step_df = pd.DataFrame(
             {"tokens saved": [s.tokens_saved for s in result.steps]},
             index=[s.description for s in result.steps],
         )
-        st.bar_chart(step_df, color="#7bd88f")
+        st.bar_chart(step_df, color="#00b894")
         for step in result.steps:
             st.write(
                 f"**{step.description}**: "
@@ -248,7 +337,7 @@ if text.strip():
             for s in suggestions:
                 st.info(s.message)
 else:
-    st.info("Enter some text above (or click **Load example**) to see the savings.")
+    st.info("👆 Paste a prompt above (or tap an example) to see the savings.")
 
 # ---------------------------------------------------------------------------
 # Usage analytics — running totals across all runs since the app last restarted
@@ -269,7 +358,7 @@ else:
         st.caption("Percent saved per run")
         st.line_chart(
             pd.DataFrame({"% saved": stats.history}),
-            color="#7bd88f",
+            color="#00b894",
         )
 
     st.caption(
@@ -280,3 +369,6 @@ else:
         stats.reset()
         st.session_state.pop("_last_run_signature", None)
         st.rerun()
+
+st.divider()
+st.caption("Built with Python · tiktoken · Streamlit — all local, no API keys, no data leaves the server.")

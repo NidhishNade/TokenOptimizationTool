@@ -52,6 +52,7 @@ Built in phases:
 - [x] Phase 6 — Visuals + extras 🎉
 - [x] Deployed live + in-app token analytics 📊
 - [x] Wordy-phrase simplifier + number→digit rules (every rule tokenizer-verified) ✂️
+- [x] Polished UI + one-click **🔥 Max savings** (stacks every reducer at once) 🎨
 
 ## Getting started
 
