@@ -1,0 +1,8 @@
+# Streamlit configuration for the hosted app.
+#
+# toolbarMode = "minimal" hides the default developer toolbar items in the
+# top-right of the app — including the "Fork", the GitHub source link, and the
+# "View app source" / "Report a bug" menu — so visitors can't jump to the repo
+# from the app itself.
+[client]
+toolbarMode = "minimal"
