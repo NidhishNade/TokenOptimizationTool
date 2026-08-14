@@ -1,6 +1,7 @@
 """Tests for the optimization engine."""
 
 from optimizer import optimize, count_tokens
+from optimizer.engine import SAFE_PIPELINE
 
 
 def test_optimize_reduces_or_keeps_tokens():
@@ -18,8 +19,8 @@ def test_optimize_actually_saves_on_padded_text():
 
 def test_result_has_a_step_per_reducer():
     result = optimize("Some text here.")
-    # Default pipeline has 3 reducers.
-    assert len(result.steps) == 3
+    # Default (safe) pipeline reducers: dedup, simplify_phrases, filler, whitespace.
+    assert len(result.steps) == len(SAFE_PIPELINE)
 
 
 def test_step_math_is_consistent():

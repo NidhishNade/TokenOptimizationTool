@@ -10,11 +10,13 @@ from .reducers import (
     caveman,
     extractive_summary,
     normalize_whitespace,
+    numbers_to_digits,
     remove_duplicate_sentences,
     remove_filler,
+    simplify_phrases,
 )
 
-__version__ = "1.3.0"
+__version__ = "1.4.0"
 
 __all__ = [
     # measuring (Phase 1)
@@ -29,10 +31,12 @@ __all__ = [
     "normalize_whitespace",
     "remove_duplicate_sentences",
     "remove_filler",
+    "simplify_phrases",
     # reducing — advanced / opt-in (Phase 3+)
     "abbreviate",
     "caveman",
     "extractive_summary",
+    "numbers_to_digits",
     # advice (Phase 3)
     "Suggestion",
     "advise",

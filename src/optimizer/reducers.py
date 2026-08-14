@@ -145,6 +145,63 @@ def remove_duplicate_sentences(text: str) -> str:
     return " ".join(kept)
 
 
+# ---------------------------------------------------------------------------
+# 3.5 Wordy-phrase simplifier  (100% safe — swaps bloated phrases for exact,
+#     shorter synonyms. Every replacement was verified to reduce cl100k tokens.)
+# ---------------------------------------------------------------------------
+
+# Verbose connective/qualifier phrases → a shorter word that means the same
+# thing. Longest keys are applied first so we don't leave fragments behind.
+# These are lossless in meaning (unlike `abbreviate`, which uses shorthand), so
+# this reducer is safe enough to live in the default pipeline.
+_WORDY_PHRASES = {
+    "in spite of the fact that": "although",
+    "despite the fact that": "although",
+    "due to the fact that": "because",
+    "owing to the fact that": "because",
+    "at this point in time": "now",
+    "at the present time": "now",
+    "for the purpose of": "for",
+    "in the event that": "if",
+    "in the near future": "soon",
+    "a large number of": "many",
+    "a great number of": "many",
+    "the majority of": "most",
+    "a majority of": "most",
+    "on a daily basis": "daily",
+    "on a regular basis": "regularly",
+    "on a weekly basis": "weekly",
+    "has the ability to": "can",
+    "have the ability to": "can",
+    "with regard to": "about",
+    "with respect to": "about",
+    "in regard to": "about",
+    "with reference to": "about",
+    "in order to": "to",
+    "is able to": "can",
+    "are able to": "can",
+    "prior to": "before",
+    "subsequent to": "after",
+    "a number of": "several",
+}
+
+
+def simplify_phrases(text: str) -> str:
+    """Replace wordy phrases with shorter, exact-meaning equivalents (safe).
+
+    e.g. "due to the fact that" -> "because", "in order to" -> "to". Every swap
+    keeps the meaning intact, so this runs in the default pipeline.
+    """
+    # Longest phrases first so "with regard to" wins before any shorter overlap.
+    for phrase in sorted(_WORDY_PHRASES, key=len, reverse=True):
+        text = re.sub(
+            re.escape(phrase), _WORDY_PHRASES[phrase], text, flags=re.IGNORECASE
+        )
+    text = re.sub(r"[ \t]+", " ", text)
+    # A swap at the start of a sentence can leave the replacement lowercased.
+    return _capitalize_sentences(text)
+
+
 # ===========================================================================
 # ADVANCED / OPT-IN reducers (Phase 3).
 # These save more but can change meaning, so they are NOT in the safe default
@@ -156,10 +213,13 @@ def remove_duplicate_sentences(text: str) -> str:
 # ---------------------------------------------------------------------------
 
 # Multi-word phrases first (longer matches win). value = short form.
+# NOTE: every mapping here was checked against the cl100k tokenizer and only
+# kept if it does NOT increase the token count. Tempting swaps like
+# "for example"->"e.g.", "with"->"w/", "without"->"w/o" and "number"->"no."
+# were removed because they actually make the text *longer* in tokens.
 _ABBREVIATION_PHRASES = {
     "as soon as possible": "ASAP",
     "with respect to": "re:",
-    "for example": "e.g.",
     "that is to say": "i.e.",
     "in order to": "to",
     "a lot of": "many",
@@ -174,10 +234,7 @@ _ABBREVIATION_WORDS = {
     "information": "info",
     "documentation": "docs",
     "application": "app",
-    "number": "no.",
     "versus": "vs",
-    "without": "w/o",
-    "with": "w/",
     "and": "&",
     "you": "u",
     "your": "ur",
@@ -289,3 +346,63 @@ def caveman(text: str) -> str:
     text = normalize_whitespace(text)
 
     return _capitalize_sentences(text)
+
+
+# ---------------------------------------------------------------------------
+# 7. Number words -> digits  (🟡 medium risk — "fifty" -> "50" can shift tone)
+# ---------------------------------------------------------------------------
+
+_NUM_UNITS = {
+    "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+    "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
+    "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
+    "seventeen": 17, "eighteen": 18, "nineteen": 19,
+}
+_NUM_TENS = {
+    "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60,
+    "seventy": 70, "eighty": 80, "ninety": 90,
+}
+_NUM_SCALES = {"hundred": 100, "thousand": 1000, "million": 1000000, "billion": 1000000000}
+_NUM_WORDS = set(_NUM_UNITS) | set(_NUM_TENS) | set(_NUM_SCALES)
+
+# One number "run": a number word, then more number words joined by spaces,
+# hyphens, or "and" (as in "one hundred and twenty").
+_NUM_ALT = "|".join(re.escape(w) for w in sorted(_NUM_WORDS, key=len, reverse=True))
+_NUM_RUN_RE = re.compile(
+    rf"\b(?:{_NUM_ALT})(?:[\s-]+(?:and[\s-]+)?(?:{_NUM_ALT}))*\b",
+    flags=re.IGNORECASE,
+)
+
+
+def _run_to_int(words: list[str]) -> int:
+    """Turn a list of number words (e.g. ['one','hundred','twenty']) into an int."""
+    total = 0
+    current = 0
+    for word in words:
+        if word in _NUM_UNITS:
+            current += _NUM_UNITS[word]
+        elif word in _NUM_TENS:
+            current += _NUM_TENS[word]
+        elif word == "hundred":
+            current = (current or 1) * 100
+        else:  # thousand / million / billion
+            total += (current or 1) * _NUM_SCALES[word]
+            current = 0
+    return total + current
+
+
+def numbers_to_digits(text: str) -> str:
+    """Convert spelled-out numbers to digits, e.g. "one hundred" -> "100" (opt-in).
+
+    Saves a token or two on written-out numbers. It can subtly change tone
+    (formal prose often prefers words), so it's aggressive/opt-in.
+    """
+
+    def _replace(match: re.Match) -> str:
+        words = [w.lower() for w in re.findall(r"[a-zA-Z]+", match.group(0))]
+        words = [w for w in words if w != "and"]
+        if not words:
+            return match.group(0)
+        return str(_run_to_int(words))
+
+    return _NUM_RUN_RE.sub(_replace, text)

@@ -51,6 +51,7 @@ Built in phases:
 - [x] Phase 5 — Streamlit web UI
 - [x] Phase 6 — Visuals + extras 🎉
 - [x] Deployed live + in-app token analytics 📊
+- [x] Wordy-phrase simplifier + number→digit rules (every rule tokenizer-verified) ✂️
 
 ## Getting started
 

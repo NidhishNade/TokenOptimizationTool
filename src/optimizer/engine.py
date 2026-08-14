@@ -20,12 +20,14 @@ Reducer = Callable[[str], str]
 # Whitespace runs last as a final tidy-up.
 SAFE_PIPELINE: list[tuple[str, str, Reducer]] = [
     ("remove_duplicates", "Drop word-for-word repeated sentences", reducers.remove_duplicate_sentences),
+    ("simplify_phrases", "Swap wordy phrases for shorter equivalents", reducers.simplify_phrases),
     ("remove_filler", "Remove politeness / padding words", reducers.remove_filler),
     ("normalize_whitespace", "Collapse wasteful whitespace", reducers.normalize_whitespace),
 ]
 
 # Extra AGGRESSIVE steps (opt-in): higher savings, but can change meaning.
 AGGRESSIVE_STEPS: list[tuple[str, str, Reducer]] = [
+    ("numbers_to_digits", "Convert number words to digits", reducers.numbers_to_digits),
     ("abbreviate", "Shorten words/phrases — aggressive", reducers.abbreviate),
 ]
 
