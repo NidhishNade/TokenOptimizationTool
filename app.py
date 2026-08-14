@@ -116,6 +116,26 @@ st.markdown(
 )
 st.write("")
 
+with st.expander("ℹ️  What does each setting do?"):
+    st.markdown(
+        "**Always on — safe, never changes meaning:**\n"
+        "- **Whitespace cleanup** — collapses extra spaces and blank lines.\n"
+        "- **Duplicate remover** — drops sentences repeated word-for-word.\n"
+        "- **Filler remover** — cuts politeness/padding (*please, kindly, thank you so much*).\n"
+        "- **Wordy-phrase simplifier** — swaps bloated phrases for exact shorter ones "
+        "(*in order to → to*, *due to the fact that → because*) — 50+ verified pairs.\n\n"
+        "**Optional — in the sidebar:**\n"
+        "- **Aggressive mode** — shorthand the model still understands "
+        "(*you → u*, *documentation → docs*, *ten → 10*). Can shift tone.\n"
+        "- **Caveman mode** — drops *a / an / the*; still reads fine.\n"
+        "- **Extractive summary** — keeps only the most important sentences (drops content).\n"
+        "- **🔥 Max savings** — turns on aggressive + caveman + all phrase swaps at once. "
+        "The biggest cut that still **keeps every sentence and its meaning** — it does *not* "
+        "drop content (turn on Extractive summary separately if you want that).\n\n"
+        "Every rule was checked against the real tokenizer (**tiktoken**) and kept only "
+        "if it *actually* reduces tokens — so the savings you see are honest, not guesses."
+    )
+
 # One-click example prompts, each showing off a different kind of waste.
 PRESETS: dict[str, str] = {
     "🙇 Polite padding": (
@@ -155,12 +175,13 @@ with st.sidebar:
     st.markdown('<p class="section-label">Reduction strength</p>', unsafe_allow_html=True)
     max_mode = st.checkbox(
         "🔥 Max savings",
-        help="Turn on EVERY reducer at once — aggressive shorthand, caveman, and "
-             "extractive summary. Squeezes the most tokens, but it's lossy: it can "
-             "change grammar and drop less-important sentences. Check the output.",
+        help="Turn on every word-level reducer at once — aggressive shorthand, "
+             "caveman, and all 50+ phrase swaps. Squeezes the most tokens while "
+             "keeping every sentence, so the meaning stays intact. (It does NOT "
+             "drop sentences — turn on Extractive summary separately for that.)",
     )
     if max_mode:
-        st.caption("🔥 All reducers active — output is lossy, review it before using.")
+        st.caption("🔥 Max word-level trimming — every sentence kept, meaning intact.")
 
     # The individual checkboxes are pure UI. Max mode is OR-ed into the effective
     # flags at point of use, so it reliably forces every reducer on regardless of
@@ -181,10 +202,14 @@ with st.sidebar:
         help="Keep only the most important sentences. Lossy — drops content.",
     )
 
-    # Effective flags actually passed to the pipeline.
+    # Effective flags actually passed to the pipeline. Max mode forces on the
+    # word-level reducers (aggressive + caveman) because they keep every sentence
+    # and only shorten wording. It deliberately does NOT force the extractive
+    # summary, which drops whole sentences — that stays a separate opt-in so Max
+    # squeezes hard without ever losing content.
     aggressive = _aggressive or max_mode
     caveman_mode = _caveman or max_mode
-    use_summary = _summary or max_mode
+    use_summary = _summary
 
     keep_ratio = st.slider(
         "Keep how much?",
@@ -193,21 +218,22 @@ with st.sidebar:
     )
     show_advice = st.checkbox("Show structural advice", value=True)
 
-    st.divider()
-    use_llm = st.checkbox(
-        "Local LLM compression ⚠️",
-        help="Experimental. Rewrite shorter with a free, offline gpt4all model. "
-             "The small model can ramble or vary run-to-run — check the output.",
-    )
-    if use_llm:
-        if not is_available():
-            st.warning(
-                "Local LLM mode needs gpt4all, which runs only when you install "
-                "and run this app on your own machine (`pip install gpt4all`). "
-                "It's unavailable on the hosted version."
-            )
-        else:
+    # Local LLM compression only appears when gpt4all is actually installed
+    # (i.e. a local power-user who ran `pip install .[llm]`). On the hosted app
+    # it isn't installed, so this experimental, sometimes-rambly option stays
+    # hidden — visitors only see the reliable rule-based features.
+    if is_available():
+        st.divider()
+        use_llm = st.checkbox(
+            "Local LLM compression (experimental)",
+            help="Rewrite shorter with a free, offline gpt4all model on your own "
+                 "machine. The small model can ramble or vary run-to-run — check "
+                 "the output before using it.",
+        )
+        if use_llm:
             st.caption("First use downloads a ~0.8 GB model (once), then runs offline.")
+    else:
+        use_llm = False
 
 # ---------------------------------------------------------------------------
 # Input
