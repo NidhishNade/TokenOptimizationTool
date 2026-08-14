@@ -18,6 +18,15 @@ from pathlib import Path
 # -r requirements.txt` and don't build the package.
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
+# Custom logo (a compression badge). Used for the browser-tab favicon and,
+# inline (resized), in the hero heading.
+LOGO_PATH = Path(__file__).resolve().parent / "assets" / "logo.svg"
+_logo_raw = LOGO_PATH.read_text(encoding="utf-8")
+HERO_LOGO = _logo_raw.replace(
+    'width="64" height="64"',
+    'style="height:2.6rem;width:2.6rem;vertical-align:-0.55rem;margin-right:0.45rem"',
+)
+
 import pandas as pd
 import streamlit as st
 
@@ -67,7 +76,7 @@ def usd_md(amount: float) -> str:
 # ---------------------------------------------------------------------------
 st.set_page_config(
     page_title="Token Optimizer",
-    page_icon="✂️",
+    page_icon=str(LOGO_PATH),
     layout="centered",
     menu_items={"about": "Token Optimizer — measure and cut tokens in LLM prompts."},
 )
@@ -159,7 +168,7 @@ st.markdown(
 ACCENT = INDIGO
 
 # --- Hero ------------------------------------------------------------------
-st.markdown('<div class="hero-title">✂️ Token Optimizer</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="hero-title">{HERO_LOGO}Token Optimizer</div>', unsafe_allow_html=True)
 st.markdown(
     '<p class="hero-sub">Trim the wasted tokens out of your AI prompts — '
     'cheaper calls, faster replies, more room in the context window.</p>',
